@@ -35,6 +35,7 @@ def main():
     
     depositsString = "Date|Transaction|Amount\n"
     withdrawalsString = "Date|Transaction|Amount\n"
+    statementsProcessed = {}
     pdfsRead = 0
     
     for fileName, text in pdfTexts.items():
@@ -46,6 +47,7 @@ def main():
         currentlyChecking = "neither"
         detectedStartYear = "9999" # if 9999 shows up in the date for results, something went terribly wrong
         detectedEndYear = "9999"
+        detectedMonth = "XXXXX"
         
         for line in lines:
             if line.startswith("Beginning Balance on"):
@@ -53,6 +55,12 @@ def main():
             if line.startswith("Ending Balance on"):
                 # this line usually looks like 'Ending Balance on October 27, 2020 $XXXXXXX'
                 detectedEndYear = line.split(",")[1].strip().split(" ")[0]
+                detectedMonth = line.split(" ", 4)[3].strip() + " " + detectedEndYear
+                #print("Processing... " + detectedMonth)
+                if statementsProcessed.get(detectedEndYear) is None:
+                    statementsProcessed[detectedEndYear] = 1
+                else:
+                    statementsProcessed[detectedEndYear] += 1
             
             if line.startswith("Cleveland,") or line == "Deposits":
                 currentlyChecking = "Deposits"
@@ -94,6 +102,8 @@ def main():
     writeToCsv(depositsString, "output/deposits.csv")
     writeToCsv(withdrawalsString, "output/withdrawals.csv")
     print("Done! Processed " + str(pdfsRead) + " statements.")
+    for year in statementsProcessed:
+        print(str(year) + ": " + str(statementsProcessed[year]))
         
         
 if __name__ == "__main__":
