@@ -19,7 +19,7 @@ def splitText(text):
     return text.split("\n")
 
 def getCsvLine(date, transaction, amount):
-    return date.strip() + "," + transaction.strip() + "," + amount.strip() + "\n"
+    return date.strip() + "|" + transaction.strip() + "|" + amount.strip() + "\n"
 
 def writeToCsv(content, fileName):
     with open(fileName, 'w') as file:
