@@ -19,7 +19,7 @@ def splitText(text):
     return text.split("\n")
 
 def getCsvLine(date, transaction, amount):
-    return date.strip() + "|" + transaction.strip() + "|" + amount.strip() + "\n"
+    return date.strip() + "," + transaction.strip() + "," + amount.strip() + "\n"
 
 def writeToCsv(content, fileName):
     with open(fileName, 'w') as file:
@@ -27,7 +27,7 @@ def writeToCsv(content, fileName):
 
 def main():
     # Probably more calculation efficient to process letter by letter
-    # (ie look for past n letters to match "deposit" or newLine or "Total Deposits"
+    # ie look for past n letters to match "deposit" or newLine or "Total Deposits"
     # instead of by text and then by line and then splitting the line...
     # but this is also easier to write and read.
     input_folder = 'input'
@@ -35,15 +35,22 @@ def main():
     
     depositsString = ""
     withdrawalsString = ""
+    pdfsRead = 0
     
     for fileName, text in pdfTexts.items():
-        print(f'Parsing {fileName}...')
+        pdfsRead += 1
+        #print(f'Parsing {fileName}...')
         lines = splitText(text)
         
         printMe = False
         currentlyChecking = "neither"
+        detectedYear = "9999" # if 9999 shows up in the date for results, something went terribly wrong
         
         for line in lines:
+            if line.startswith("Ending Balance on"):
+                # this line usually looks like 'Ending Balance on October 27, 2020 $XXXXXXX'
+                detectedYear = line.split(",")[1].strip().split(" ")[0]
+            
             if line.startswith("Cleveland,") or line == "Deposits":
                 currentlyChecking = "Deposits"
                 printMe = True
@@ -58,12 +65,12 @@ def main():
             # the relevant lines start with a number, so we can filter out the rest
             if printMe and (line.startswith("01") or line.startswith("02") or line.startswith("03") or line.startswith("04") or line.startswith("05") or line.startswith("06") or line.startswith("07") or line.startswith("08") or line.startswith("09") or line.startswith("10") or line.startswith("11") or line.startswith("12") ):
                 if currentlyChecking == "Deposits":
-                    date = line.split(" ", 1)[0]
-                    transaction = line.split(" ", 1)[1].split("$", 1)[0]
+                    date = line.split(" ", 1)[0] + "/" + detectedYear
+                    transaction = line.split(" ", 1)[1].split("$", 1)[0] # the leading $ for the amount is a good delimiter
                     amount = line.split("$", 1)[1]
                     depositsString += getCsvLine(date, transaction, amount)
                 elif currentlyChecking == "Withdrawals":
-                    date = line.split(" ", 1)[0]
+                    date = line.split(" ", 1)[0] + "/" + detectedYear
                     transaction = line.split(" ", 1)[1].split("$", 1)[0]
                     amount = line.split("$", 1)[1]
                     withdrawalsString += getCsvLine(date, transaction, amount)
@@ -73,7 +80,7 @@ def main():
         
     writeToCsv(depositsString, "output/deposits.csv")
     writeToCsv(withdrawalsString, "output/withdrawals.csv")
-    print("Done!")
+    print("Done! Processed " + str(pdfsRead) + " statements.")
         
         
 if __name__ == "__main__":
